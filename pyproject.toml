@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "self-derived-skills"
+version = "0.1.0"
+description = "GRPO for small language models conditioned on self-derived procedural skills."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "datasets==5.1.0",
+    "math-verify[antlr4_13_2]==0.9.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit==4.7.0",
+    "pytest==9.2.0",
+    "ruff==0.17.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/self_derived_skills"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["B", "D", "E", "F", "I", "UP"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

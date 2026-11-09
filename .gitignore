@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+.ipynb_checkpoints/
+
+# Data, models, and run outputs stay out of Git
+data/
+outputs/
+runs/
+wandb/
+trackio/
+*.safetensors
+
+# Local working material
+tmp/
+research_notes/
+reports/
+*.pdf
+
+# Credentials
+.env
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
