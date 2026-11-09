@@ -23,8 +23,8 @@ To enable the lint and formatting hooks, run `uv run pre-commit install`. Add `-
 
 ## Running on Colab
 
-Open `notebooks/colab_runner.ipynb` in Colab and follow its first cell. Training needs a GPU. Run
-records and adapters are saved to Google Drive.
+Open `notebooks/colab_runner.ipynb` in Colab and follow its first cell. Training needs a GPU. The
+probe writes to the runtime's local disk.
 
 ## Data checks
 
