@@ -26,7 +26,9 @@ trainer:
   loss_type: dapo
   scale_rewards: group
   beta: 0.0
-  learning_rate: 1.0e-4
+  # 1e-4, from TRL's LoRA example, lowered dev accuracy on this model. 1e-5 is the rate in
+  # Hugging Face's GRPO cookbook.
+  learning_rate: 1.0e-5
   temperature: 1.0
   top_p: 1.0
   top_k: 0

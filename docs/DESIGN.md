@@ -34,8 +34,9 @@ The reward is 1.0 if the last boxed expression in a completion is equivalent to 
 under `math_verify`, and 0.0 otherwise. It is strictly binary because GRPO normalizes rewards by
 the group's standard deviation, which would inflate any small partial credit.
 
-- **Only the final boxed answer counts.** A missing, empty, or unclosed final box scores 0.0, so
-  truncated completions cannot earn credit from an earlier answer.
+- **Only the final boxed answer counts.** A missing, empty, or unclosed final box scores 0.0. A
+  completion cut off after a complete box is scored on that box, unless the cut falls inside a
+  later box.
 - **Extraction is LaTeX-only.** The default `math_verify` config also tries plain-expression
   parsing, which sends text to SymPy's eval-based `parse_expr`. Completions are untrusted.
 - **The reward runs in the main thread.** `math_verify` enforces its timeouts with `signal.alarm`.
