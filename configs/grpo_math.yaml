@@ -4,7 +4,8 @@ split_manifest: configs/math_split.json
 model:
   name: Qwen/Qwen3.5-0.8B
   revision: 2fc06364715b967f1860aea9cf38778875588b17
-  dtype: bfloat16
+  # TRL's gradient kernel cannot run bf16 on GPUs older than compute capability 8.0, such as a T4.
+  dtype: float32
 
 # From TRL's LoRA example. Not yet validated on this model.
 lora:
@@ -30,7 +31,8 @@ trainer:
   top_p: 1.0
   top_k: 0
   gradient_checkpointing: true
-  bf16: true
+  # TRL defaults to bf16 unless it is turned off here.
+  bf16: false
   seed: 230
   logging_steps: 1
   report_to: none

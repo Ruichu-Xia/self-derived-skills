@@ -66,6 +66,10 @@ The standard GRPO baseline uses TRL's `GRPOTrainer` with a LoRA adapter and the 
 `configs/grpo_math.yaml`. TRL's default variant differs from the original GRPO: it normalizes the
 loss by active tokens across the batch (`loss_type: dapo`) and has no KL penalty (`beta: 0`).
 
+Training runs in float32 on every GPU, so that results do not depend on which GPU Colab assigns.
+For bf16 inputs, TRL's gradient kernel needs a mixed-precision matrix product that PyTorch only
+supports on GPUs with compute capability 8.0 or higher, which excludes Colab's T4.
+
 The reward function also logs what TRL does not report directly: the share of groups that all
 fail, all pass, or are mixed, and the cumulative number of sampled completion tokens. Only mixed
 groups give GRPO a policy gradient.
