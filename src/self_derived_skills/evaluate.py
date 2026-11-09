@@ -13,6 +13,49 @@ from self_derived_skills.reward import math_reward
 
 
 @torch.inference_mode()
+def generate_completions(
+    model: Any,
+    tokenizer: Any,
+    messages: Sequence[list[dict[str, str]]],
+    template_kwargs: dict[str, Any],
+    max_new_tokens: int,
+    **generate_kwargs: Any,
+) -> list[dict[str, Any]]:
+    """Return each completion's text, token count, and whether it hit the token limit.
+
+    With num_return_sequences=k, each prompt's k completions are consecutive.
+    """
+    prompts = [
+        tokenizer.apply_chat_template(
+            chat, tokenize=False, add_generation_prompt=True, **template_kwargs
+        )
+        for chat in messages
+    ]
+    inputs = tokenizer(prompts, return_tensors="pt", padding=True, padding_side="left")
+    inputs = inputs.to(model.device)
+    output_ids = model.generate(
+        **inputs,
+        max_new_tokens=max_new_tokens,
+        pad_token_id=tokenizer.pad_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        **generate_kwargs,
+    )
+
+    completions = []
+    for ids in output_ids[:, inputs["input_ids"].shape[1] :]:
+        eos_positions = (ids == tokenizer.eos_token_id).nonzero()
+        truncated = len(eos_positions) == 0
+        length = len(ids) if truncated else int(eos_positions[0])
+        completions.append(
+            {
+                "completion": tokenizer.decode(ids[:length], skip_special_tokens=True),
+                "completion_tokens": length,
+                "truncated": truncated,
+            }
+        )
+    return completions
+
+
 def generate_and_score(
     model: Any,
     tokenizer: Any,
@@ -21,44 +64,20 @@ def generate_and_score(
     max_new_tokens: int,
 ) -> list[dict[str, Any]]:
     """Generate one greedy completion per problem and score it with the training reward."""
-    prompts = [
-        tokenizer.apply_chat_template(
-            build_math_messages(problem.problem),
-            tokenize=False,
-            add_generation_prompt=True,
-            **template_kwargs,
-        )
-        for problem in problems
-    ]
-    inputs = tokenizer(prompts, return_tensors="pt", padding=True, padding_side="left")
-    inputs = inputs.to(model.device)
-    output_ids = model.generate(
-        **inputs,
-        max_new_tokens=max_new_tokens,
-        do_sample=False,
-        pad_token_id=tokenizer.pad_token_id,
-        eos_token_id=tokenizer.eos_token_id,
+    messages = [build_math_messages(problem.problem) for problem in problems]
+    completions = generate_completions(
+        model, tokenizer, messages, template_kwargs, max_new_tokens, do_sample=False
     )
-    completion_ids = output_ids[:, inputs["input_ids"].shape[1] :]
-
-    results = []
-    for problem, ids in zip(problems, completion_ids, strict=True):
-        eos_positions = (ids == tokenizer.eos_token_id).nonzero()
-        truncated = len(eos_positions) == 0
-        length = len(ids) if truncated else int(eos_positions[0])
-        completion = tokenizer.decode(ids[:length], skip_special_tokens=True)
-        results.append(
-            {
-                "problem_id": problem.problem_id,
-                "level": problem.level,
-                "subject": problem.subject,
-                "correct": math_reward(completion, problem.answer) == 1.0,
-                "completion_tokens": length,
-                "truncated": truncated,
-                "completion": completion,
-            }
-        )
-    return results
+    return [
+        {
+            "problem_id": problem.problem_id,
+            "level": problem.level,
+            "subject": problem.subject,
+            "correct": math_reward(completion["completion"], problem.answer) == 1.0,
+            **completion,
+        }
+        for problem, completion in zip(problems, completions, strict=True)
+    ]
 
 
 def evaluate_problems(

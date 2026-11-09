@@ -6,9 +6,10 @@ skills written by the model itself lets Qwen3.5-0.8B reach a given held-out perf
 sampled tokens and less compute.
 
 The repository currently contains the MATH data split, prompt format, binary reward, and the code
-and Colab notebooks for the two baselines: the untrained model and standard GRPO. Skill construction
-and the skill-conditioned runs will be added next. See [docs/DESIGN.md](docs/DESIGN.md) for the
-design and the reasoning behind it.
+and Colab notebooks for the two baselines, the untrained model and standard GRPO, plus skill
+construction and GRPO with the global skill bank. Clustered retrieval, per-problem conditioning, and
+the shuffled control are still to come. See [docs/DESIGN.md](docs/DESIGN.md) for the design and the
+reasoning behind it.
 
 ## Setup
 
@@ -31,6 +32,8 @@ stopped if the session disconnects. Results are saved to Google Drive by default
 | :--- | :--- |
 | `notebooks/baseline_inference.ipynb` | Untrained-model accuracy on MATH dev and MATH-500 |
 | `notebooks/baseline_grpo.ipynb` | Standard GRPO training, learning curve, and final dev accuracy |
+| `notebooks/skill_pipeline.ipynb` | Rollouts, the global skill bank, and the pilot that gates RL |
+| `notebooks/skill_grpo.ipynb` | GRPO with the global bank in training prompts, evaluated without it |
 | `notebooks/colab_runner.ipynb` | A short probe of model checks and GRPO step time |
 
 ## Data checks

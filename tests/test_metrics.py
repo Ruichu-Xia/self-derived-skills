@@ -8,8 +8,10 @@ from self_derived_skills.metrics import (
     accuracy_summary,
     append_results,
     build_learning_curve,
+    compare_skill_pilot,
     load_results,
     summarize_results,
+    summarize_rollouts,
 )
 
 
@@ -69,6 +71,69 @@ def test_load_ignores_only_an_incomplete_final_line(tmp_path):
     path = tmp_path / "results.jsonl"
     path.write_text(json.dumps({"problem_id": "a"}) + '\n{"problem_id": "b", "corr')
     assert [result["problem_id"] for result in load_results(path)] == ["a"]
+
+
+def test_append_after_an_interrupted_write_keeps_the_file_readable(tmp_path):
+    """New results replace a partial final line instead of joining it."""
+    path = tmp_path / "results.jsonl"
+    path.write_text(json.dumps({"problem_id": "a"}) + '\n{"problem_id": "b", "corr')
+    append_results(path, [{"problem_id": "c"}])
+    append_results(path, [{"problem_id": "d"}])
+    assert [result["problem_id"] for result in load_results(path)] == ["a", "c", "d"]
+
+
+def test_summarize_rollouts_counts_groups_tokens_and_time():
+    """Totals cover every rollout, and each problem's group is classified."""
+
+    def rollout(correct, truncated=False, tokens=10):
+        """Build one sampled rollout."""
+        return {"correct": correct, "truncated": truncated, "completion_tokens": tokens}
+
+    records = [
+        {"rollouts": [rollout(True), rollout(False, truncated=True, tokens=30)], "seconds": 1.5},
+        {"rollouts": [rollout(False), rollout(False)], "seconds": 2.5},
+    ]
+    summary = summarize_rollouts(records)
+    assert (summary["num_problems"], summary["num_rollouts"]) == (2, 4)
+    assert summary["accuracy"] == pytest.approx(0.25)
+    assert summary["truncated_frac"] == pytest.approx(0.25)
+    assert summary["completion_tokens"] == 60
+    assert summary["seconds"] == pytest.approx(4.0)
+    assert summary["groups"] == {"all_fail": 1, "all_pass": 0, "mixed": 1}
+
+
+def pilot_summary(accuracy, mixed):
+    """Build a rollout summary for 10 problems with 40 rollouts."""
+    return {
+        "num_problems": 10,
+        "num_rollouts": 40,
+        "accuracy": accuracy,
+        "groups": {"mixed": mixed},
+    }
+
+
+@pytest.mark.parametrize(
+    ("accuracy_with", "mixed_with", "passed"),
+    [
+        (0.30, 5, True),
+        (0.25, 5, True),
+        (0.20, 5, False),
+        (0.30, 3, False),
+        (0.30, 2, False),
+    ],
+)
+def test_pilot_gate_needs_kept_accuracy_and_more_mixed_groups(accuracy_with, mixed_with, passed):
+    """Skills must not lower accuracy and must strictly raise the mixed-group share."""
+    result = compare_skill_pilot(pilot_summary(0.25, 3), pilot_summary(accuracy_with, mixed_with))
+    assert result["passed"] is passed
+    assert result["mixed_share_without"] == pytest.approx(0.3)
+
+
+def test_pilot_rejects_conditions_of_different_sizes():
+    """The two conditions must be measured on the same number of rollouts."""
+    other = {**pilot_summary(0.3, 5), "num_rollouts": 20}
+    with pytest.raises(ValueError, match="different numbers"):
+        compare_skill_pilot(pilot_summary(0.25, 3), other)
 
 
 def test_load_rejects_corruption_before_the_final_line(tmp_path):

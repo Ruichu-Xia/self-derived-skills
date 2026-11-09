@@ -1,4 +1,4 @@
-"""Train the standard GRPO baseline, resuming from the latest checkpoint if one exists."""
+"""Train GRPO, with or without skills, resuming from the latest checkpoint if one exists."""
 
 import argparse
 import json
@@ -13,6 +13,7 @@ from transformers.utils.import_utils import is_flash_linear_attention_available
 
 from self_derived_skills.data import load_math_splits
 from self_derived_skills.run_record import write_run_record
+from self_derived_skills.skills import load_skill_bank
 from self_derived_skills.train import build_trainer, load_model_and_tokenizer
 
 
@@ -43,6 +44,7 @@ def main() -> None:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-steps", type=int, required=True)
+    parser.add_argument("--skill-bank", type=Path, help="Skills for training prompts, if any")
     args = parser.parse_args()
 
     final_adapter = args.output_dir / "final_adapter"
@@ -63,7 +65,9 @@ def main() -> None:
     checkpoint_dir = args.output_dir / "checkpoints"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     checkpoint = get_last_checkpoint(str(checkpoint_dir))
-    write_run_record(args.output_dir, {**config, "max_steps": args.max_steps}, device_name)
+    skills = load_skill_bank(args.skill_bank) if args.skill_bank else []
+    run_settings = {"max_steps": args.max_steps, "skills": skills}
+    write_run_record(args.output_dir, {**config, **run_settings}, device_name)
     print(f"Device: {device_name}. Resuming from: {checkpoint}", flush=True)
 
     # The seed must be set before the trainer creates the adapter's random initial weights.
@@ -78,6 +82,7 @@ def main() -> None:
         checkpoint_dir,
         args.max_steps,
         initial_sampled_tokens=sampled_tokens_in_checkpoint(checkpoint),
+        skills=skills,
     )
     trainer.add_callback(TrainingLogWriter(args.output_dir / "train_log.json"))
     trainer.train(resume_from_checkpoint=checkpoint)

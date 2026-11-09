@@ -24,11 +24,11 @@ def load_model_and_tokenizer(model_config: dict[str, str]) -> tuple[Any, Any]:
     return model, tokenizer
 
 
-def make_train_dataset(problems: Sequence[MathProblem]) -> Dataset:
+def make_train_dataset(problems: Sequence[MathProblem], skills: Sequence[str] = ()) -> Dataset:
     """Build the dataset whose columns TRL and the reward function read."""
     rows = [
         {
-            "prompt": build_math_messages(problem.problem),
+            "prompt": build_math_messages(problem.problem, skills),
             "answer": problem.answer,
             "problem_id": problem.problem_id,
         }
@@ -45,13 +45,14 @@ def build_trainer(
     output_dir: Path,
     max_steps: int,
     initial_sampled_tokens: int = 0,
+    skills: Sequence[str] = (),
 ) -> GRPOTrainer:
-    """Build a LoRA GRPO trainer from a loaded config."""
+    """Build a LoRA GRPO trainer from a loaded config, with optional skills in its prompts."""
     args = GRPOConfig(output_dir=str(output_dir), max_steps=max_steps, **config["trainer"])
     return GRPOTrainer(
         model=model,
         args=args,
-        train_dataset=make_train_dataset(problems),
+        train_dataset=make_train_dataset(problems, skills),
         processing_class=tokenizer,
         reward_funcs=make_grpo_reward(args.num_generations, initial_sampled_tokens),
         peft_config=LoraConfig(**config["lora"]),
