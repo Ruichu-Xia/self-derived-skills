@@ -14,11 +14,11 @@ lora:
   target_modules: all-linear
 
 trainer:
-  # Each optimizer step samples 4 problems with 4 completions each: 4 x 4 / 4 = 4 problems.
+  # Each optimizer step samples 8 problems with 4 completions each: 4 x 8 / 4 = 8 problems.
   # Accumulating over small batches limits the memory used by backward passes on a T4.
   num_generations: 4
   per_device_train_batch_size: 4
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 8
   max_completion_length: 1024
   chat_template_kwargs:
     enable_thinking: false
@@ -36,4 +36,5 @@ trainer:
   seed: 230
   logging_steps: 1
   report_to: none
-  save_strategy: "no"
+  save_strategy: steps
+  save_steps: 20

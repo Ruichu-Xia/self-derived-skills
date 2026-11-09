@@ -74,7 +74,25 @@ The reward function also logs what TRL does not report directly: the share of gr
 fail, all pass, or are mixed, and the cumulative number of sampled completion tokens. Only mixed
 groups give GRPO a policy gradient.
 
+Each step samples 8 problems with 4 completions each. The trainer saves a checkpoint every 20 steps,
+and a restarted run resumes from the latest one. The sampled-token count resumes with it, so that
+token budgets stay comparable across interrupted runs.
+
+## Evaluation
+
+Every checkpoint gets one greedy attempt per problem, with no skills in the prompt, and is scored
+with the training reward. Results are saved after each batch, so that an interrupted evaluation
+resumes without repeating finished problems.
+
+| Set | Size | Used for |
+| :--- | ---: | :--- |
+| Dev subset | 200 | Learning curve across checkpoints, stratified by level |
+| Dev | 1,000 | Untrained model and final adapter |
+| MATH-500 | 500 | Untrained model now, trained models only for the final report |
+
+The subset exists because evaluating every checkpoint on the full dev set would take hours on a T4.
+
 ## Run records
 
-Each run writes `run.json` with its command, resolved config, Git commit, dataset revisions, device,
-and installed package versions.
+Each invocation writes a timestamped `run-*.json` with its command, resolved config, Git commit,
+dataset revisions, device, and installed package versions.

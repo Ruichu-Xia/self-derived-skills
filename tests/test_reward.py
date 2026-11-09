@@ -147,3 +147,11 @@ def test_completion_never_reaches_expression_eval(monkeypatch):
     completion = r"\boxed{__import__('os').system('true')} or 1+1 = 2"
     assert math_reward(completion, "2") == 0.0
     assert calls == []
+
+
+def test_grpo_reward_continues_the_token_count_after_a_resume():
+    """A resumed run keeps counting from the checkpoint, so token budgets stay comparable."""
+    metrics = {}
+    reward_fn = make_grpo_reward(2, initial_sampled_tokens=100)
+    call_grpo_reward(reward_fn, ["5", "5"], ["a", "a"], [[1, 2], [3]], metrics)
+    assert metrics["tokens/sampled_total"] == 103

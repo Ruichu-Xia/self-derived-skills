@@ -29,6 +29,9 @@ MATH_500_DATASET = "HuggingFaceH4/MATH-500"
 MATH_500_REVISION = "6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be"
 MATH_500_SIZE = 500
 
+# Evaluating every checkpoint on the full dev set would take hours on a T4.
+DEV_SUBSET_SIZE = 200
+
 
 @dataclass(frozen=True)
 class MathProblem:
@@ -151,3 +154,18 @@ def load_math_splits(manifest_path: Path) -> tuple[list[MathProblem], list[MathP
     if manifest["revision"] != MATH_REVISION:
         raise ValueError(f"Manifest revision {manifest['revision']} is not {MATH_REVISION}")
     return split_by_ids(load_math_train(), manifest["dev_ids"])
+
+
+def load_eval_problems(split: str, manifest_path: Path) -> list[MathProblem]:
+    """Return the problems in an evaluation split: dev, dev-subset, or math500."""
+    if split == "math500":
+        return load_math_500()
+    if split not in {"dev", "dev-subset"}:
+        raise ValueError(f"Unknown evaluation split: {split!r}")
+
+    _, dev = load_math_splits(manifest_path)
+    if split == "dev":
+        return dev
+    seed = json.loads(manifest_path.read_text())["seed"]
+    subset_ids = set(select_dev_ids(dev, DEV_SUBSET_SIZE, seed))
+    return [problem for problem in dev if problem.problem_id in subset_ids]

@@ -18,11 +18,12 @@ def run_git(*args: str) -> str:
     return result.stdout.strip()
 
 
-def write_run_record(output_dir: Path, config: dict[str, Any], device_name: str) -> None:
-    """Write run.json with the command, config, code version, data revisions, and environment."""
+def write_run_record(output_dir: Path, config: dict[str, Any], device_name: str) -> Path:
+    """Write a timestamped record of the command, config, code, data, and environment."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    started_at = datetime.now(UTC)
     record = {
-        "started_at": datetime.now(UTC).isoformat(),
+        "started_at": started_at.isoformat(),
         "command": sys.argv,
         "config": config,
         "git_commit": run_git("rev-parse", "HEAD"),
@@ -32,4 +33,6 @@ def write_run_record(output_dir: Path, config: dict[str, Any], device_name: str)
         "python": platform.python_version(),
         "packages": {dist.metadata["Name"]: dist.version for dist in metadata.distributions()},
     }
-    (output_dir / "run.json").write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
+    path = output_dir / f"run-{started_at:%Y%m%dT%H%M%S%fZ}.json"
+    path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
+    return path

@@ -8,9 +8,7 @@ from self_derived_skills.run_record import run_git, write_run_record
 def test_run_record_captures_config_code_and_environment(tmp_path):
     """A run record holds what is needed to trace a result back to its inputs."""
     output_dir = tmp_path / "nested" / "run"
-    write_run_record(output_dir, {"seed": 230}, "test-device")
-
-    record = json.loads((output_dir / "run.json").read_text())
+    record = json.loads(write_run_record(output_dir, {"seed": 230}, "test-device").read_text())
     assert record["config"] == {"seed": 230}
     assert record["device"] == "test-device"
     assert record["git_commit"] == run_git("rev-parse", "HEAD")

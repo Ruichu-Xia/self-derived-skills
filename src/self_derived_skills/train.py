@@ -44,6 +44,7 @@ def build_trainer(
     tokenizer: Any,
     output_dir: Path,
     max_steps: int,
+    initial_sampled_tokens: int = 0,
 ) -> GRPOTrainer:
     """Build a LoRA GRPO trainer from a loaded config."""
     args = GRPOConfig(output_dir=str(output_dir), max_steps=max_steps, **config["trainer"])
@@ -52,6 +53,6 @@ def build_trainer(
         args=args,
         train_dataset=make_train_dataset(problems),
         processing_class=tokenizer,
-        reward_funcs=make_grpo_reward(args.num_generations),
+        reward_funcs=make_grpo_reward(args.num_generations, initial_sampled_tokens),
         peft_config=LoraConfig(**config["lora"]),
     )

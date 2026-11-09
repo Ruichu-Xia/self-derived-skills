@@ -5,9 +5,10 @@ Learning for Small Language Models*. The project tests whether conditioning GRPO
 skills written by the model itself lets Qwen3.5-0.8B reach a given held-out performance with fewer
 sampled tokens and less compute.
 
-The repository currently contains the MATH data split, prompt format, binary reward, GRPO trainer
-setup, and a probe that checks the model and times training on a GPU. Evaluation code will be added
-next. See [docs/DESIGN.md](docs/DESIGN.md) for the design and the reasoning behind it.
+The repository currently contains the MATH data split, prompt format, binary reward, and the code
+and Colab notebooks for the two baselines: the untrained model and standard GRPO. Skill construction
+and the skill-conditioned runs will be added next. See [docs/DESIGN.md](docs/DESIGN.md) for the
+design and the reasoning behind it.
 
 ## Setup
 
@@ -23,8 +24,14 @@ To enable the lint and formatting hooks, run `uv run pre-commit install`. Add `-
 
 ## Running on Colab
 
-Open `notebooks/colab_runner.ipynb` in Colab and follow its first cell. Training needs a GPU. The
-probe writes to the runtime's local disk.
+Each notebook runs from start to finish with **Runtime > Run all**, and resumes from where it
+stopped if the session disconnects. Results are saved to Google Drive by default.
+
+| Notebook | Produces |
+| :--- | :--- |
+| `notebooks/baseline_inference.ipynb` | Untrained-model accuracy on MATH dev and MATH-500 |
+| `notebooks/baseline_grpo.ipynb` | Standard GRPO training, learning curve, and final dev accuracy |
+| `notebooks/colab_runner.ipynb` | A short probe of model checks and GRPO step time |
 
 ## Data checks
 

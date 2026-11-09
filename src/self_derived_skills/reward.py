@@ -77,9 +77,11 @@ def summarize_groups(rewards: Sequence[float], num_generations: int) -> dict[str
     return counts
 
 
-def make_grpo_reward(num_generations: int) -> Callable[..., list[float]]:
+def make_grpo_reward(
+    num_generations: int, initial_sampled_tokens: int = 0
+) -> Callable[..., list[float]]:
     """Build the reward function for TRL, which also logs group contrast and sampled tokens."""
-    sampled_tokens = 0
+    sampled_tokens = initial_sampled_tokens
 
     def math_accuracy(
         completions: list[list[dict[str, str]]],
