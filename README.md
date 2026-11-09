@@ -5,9 +5,9 @@ Learning for Small Language Models*. The project tests whether conditioning GRPO
 skills written by the model itself lets Qwen3.5-0.8B reach a given held-out performance with fewer
 sampled tokens and less compute.
 
-The repository currently contains the MATH data split, prompt format, and binary reward. Training
-and evaluation code will be added next. See [docs/DESIGN.md](docs/DESIGN.md) for the design and the
-reasoning behind it.
+The repository currently contains the MATH data split, prompt format, binary reward, GRPO trainer
+setup, and a probe that checks the model and times training on a GPU. Evaluation code will be added
+next. See [docs/DESIGN.md](docs/DESIGN.md) for the design and the reasoning behind it.
 
 ## Setup
 
@@ -18,7 +18,13 @@ uv sync
 uv run pytest
 ```
 
-To enable the lint and formatting hooks, run `uv run pre-commit install`.
+To enable the lint and formatting hooks, run `uv run pre-commit install`. Add `--extra train` to
+`uv sync` to install the training stack.
+
+## Running on Colab
+
+Open `notebooks/colab_runner.ipynb` in Colab and follow its first cell. Training needs a GPU. Run
+records and adapters are saved to Google Drive.
 
 ## Data checks
 
@@ -46,9 +52,11 @@ remaining online does not settle the dataset's legal status.
 ## Layout
 
 ```text
-configs/   Split manifest and, later, run settings
-docs/      Design document
-scripts/   Data preparation and validation
-src/       The self_derived_skills package
-tests/     Unit tests, which need no network or GPU
+configs/      Split manifest and run settings
+docs/         Design document
+experiments/  Entry points for runs
+notebooks/    Colab runner
+scripts/      Data preparation and validation
+src/          The self_derived_skills package
+tests/        Unit tests, which need no network or GPU
 ```

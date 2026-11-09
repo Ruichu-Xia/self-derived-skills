@@ -49,3 +49,28 @@ text are accepted: `6\%` for `6` and `3:1` for `3`.
 
 Training and evaluation share one zero-shot user message: the problem, followed by the instruction
 to reason step by step and box the final answer.
+
+## Model
+
+Qwen3.5-0.8B is loaded with `AutoModelForCausalLM`, which gives the text-only model. Thinking is
+disabled through the chat template, which prefills an empty think block.
+
+Its linear-attention layers need the `flash-linear-attention` kernel on a GPU, because transformers
+otherwise falls back to a far slower reference implementation. The probe stops if the kernel is
+missing on a GPU, so that timings cannot silently describe the slow path. The optional
+`causal-conv1d` kernel is not installed, because it must be compiled with `nvcc`.
+
+## Training
+
+The standard GRPO baseline uses TRL's `GRPOTrainer` with a LoRA adapter and the settings in
+`configs/grpo_math.yaml`. TRL's default variant differs from the original GRPO: it normalizes the
+loss by active tokens across the batch (`loss_type: dapo`) and has no KL penalty (`beta: 0`).
+
+The reward function also logs what TRL does not report directly: the share of groups that all
+fail, all pass, or are mixed, and the cumulative number of sampled completion tokens. Only mixed
+groups give GRPO a policy gradient.
+
+## Run records
+
+Each run writes `run.json` with its command, resolved config, Git commit, dataset revisions, device,
+and installed package versions.

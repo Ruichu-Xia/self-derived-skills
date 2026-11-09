@@ -13,6 +13,23 @@ dependencies = [
     "math-verify[antlr4_13_2]==0.9.0",
 ]
 
+[project.optional-dependencies]
+# torch stays unpinned so Colab can keep its preinstalled CUDA build. Runs record the actual version.
+train = [
+    "accelerate==1.15.0",
+    "peft==0.21.2",
+    "pyyaml==6.0.3",
+    "torch>=2.6.0",
+    "transformers==5.22.1",
+    "trl==1.17.1",
+]
+
+# Optimized kernel for Qwen3.5's linear-attention layers. It needs CUDA, so it is separate from
+# train. Without it transformers falls back to a far slower reference implementation.
+cuda = [
+    "flash-linear-attention[cuda]==0.6.0",
+]
+
 [dependency-groups]
 dev = [
     "pre-commit==4.7.0",
@@ -33,6 +50,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["B", "D", "E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

@@ -1,5 +1,8 @@
 """Binary MATH reward: does the final boxed answer equal the gold answer."""
 
+from collections.abc import Callable, Sequence
+from typing import Any
+
 from math_verify import LatexExtractionConfig, parse, verify
 
 BOXED_PREFIX = "\\boxed{"
@@ -55,3 +58,54 @@ def math_reward(completion: str, gold_answer: str) -> float:
         return 0.0
     predicted = parse_answer(content)
     return float(bool(predicted) and verify(gold, predicted))
+
+
+def summarize_groups(rewards: Sequence[float], num_generations: int) -> dict[str, int]:
+    """Count rollout groups that all fail, all pass, or mix the two."""
+    if len(rewards) % num_generations != 0:
+        raise ValueError(f"{len(rewards)} rewards do not form groups of {num_generations}")
+
+    counts = {"all_fail": 0, "all_pass": 0, "mixed": 0}
+    for start in range(0, len(rewards), num_generations):
+        passes = sum(rewards[start : start + num_generations])
+        if passes == 0:
+            counts["all_fail"] += 1
+        elif passes == num_generations:
+            counts["all_pass"] += 1
+        else:
+            counts["mixed"] += 1
+    return counts
+
+
+def make_grpo_reward(num_generations: int) -> Callable[..., list[float]]:
+    """Build the reward function for TRL, which also logs group contrast and sampled tokens."""
+    sampled_tokens = 0
+
+    def math_accuracy(
+        completions: list[list[dict[str, str]]],
+        answer: list[str],
+        problem_id: list[str],
+        completion_ids: list[list[int]],
+        log_metric: Callable[[str, float], None],
+        **_: Any,
+    ) -> list[float]:
+        """Score each completion and log how many groups give GRPO a learning signal."""
+        nonlocal sampled_tokens
+        for start in range(0, len(problem_id), num_generations):
+            if len(set(problem_id[start : start + num_generations])) != 1:
+                raise ValueError("Completions are not in consecutive groups per problem")
+
+        rewards = [
+            math_reward(completion[0]["content"], gold)
+            for completion, gold in zip(completions, answer, strict=True)
+        ]
+
+        counts = summarize_groups(rewards, num_generations)
+        num_groups = sum(counts.values())
+        for name, count in counts.items():
+            log_metric(f"groups/{name}_frac", count / num_groups)
+        sampled_tokens += sum(len(ids) for ids in completion_ids)
+        log_metric("tokens/sampled_total", sampled_tokens)
+        return rewards
+
+    return math_accuracy

@@ -1,0 +1,36 @@
+# Settings shared by the GRPO probe and the standard GRPO baseline on MATH.
+split_manifest: configs/math_split.json
+
+model:
+  name: Qwen/Qwen3.5-0.8B
+  revision: 2fc06364715b967f1860aea9cf38778875588b17
+  dtype: bfloat16
+
+# From TRL's LoRA example. Not yet validated on this model.
+lora:
+  r: 32
+  lora_alpha: 64
+  target_modules: all-linear
+
+trainer:
+  # Each optimizer step samples 4 problems with 4 completions each: 8 x 2 / 4 = 4 problems.
+  num_generations: 4
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 2
+  max_completion_length: 1024
+  chat_template_kwargs:
+    enable_thinking: false
+  # TRL's default variant: DAPO token normalization and no KL penalty.
+  loss_type: dapo
+  scale_rewards: group
+  beta: 0.0
+  learning_rate: 1.0e-4
+  temperature: 1.0
+  top_p: 1.0
+  top_k: 0
+  gradient_checkpointing: true
+  bf16: true
+  seed: 230
+  logging_steps: 1
+  report_to: none
+  save_strategy: "no"

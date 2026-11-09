@@ -2,7 +2,12 @@
 
 import pytest
 
-from self_derived_skills.reward import last_boxed_content, math_reward
+from self_derived_skills.reward import (
+    last_boxed_content,
+    make_grpo_reward,
+    math_reward,
+    summarize_groups,
+)
 
 
 @pytest.mark.parametrize(
@@ -76,6 +81,63 @@ def test_unparseable_gold_answer_raises():
     """A gold answer that cannot be parsed is a data error, not a zero reward."""
     with pytest.raises(ValueError, match="Gold answer did not parse"):
         math_reward(r"\boxed{5}", "")
+
+
+def test_summarize_groups_separates_all_fail_all_pass_and_mixed():
+    """Each group is classified by whether its candidates disagree."""
+    rewards = [0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
+    assert summarize_groups(rewards, 2) == {"all_fail": 2, "all_pass": 1, "mixed": 1}
+
+
+def test_summarize_groups_rejects_incomplete_groups():
+    """Rewards that cannot form whole groups indicate a batching bug."""
+    with pytest.raises(ValueError, match="do not form groups"):
+        summarize_groups([1.0, 0.0, 1.0], 2)
+
+
+def call_grpo_reward(reward_fn, answers, problem_ids, token_ids, metrics):
+    """Call a GRPO reward function the way TRL does, collecting its logged metrics."""
+    completions = [[{"role": "assistant", "content": rf"\boxed{{{a}}}"}] for a in answers]
+    return reward_fn(
+        completions=completions,
+        answer=["5"] * len(answers),
+        problem_id=problem_ids,
+        completion_ids=token_ids,
+        log_metric=lambda name, value: metrics.__setitem__(name, value),
+        trainer_state=None,
+    )
+
+
+def test_grpo_reward_scores_completions_and_logs_group_contrast():
+    """The reward returns one value per completion and logs group shares."""
+    metrics = {}
+    rewards = call_grpo_reward(
+        make_grpo_reward(2),
+        answers=["5", "4", "1", "2"],
+        problem_ids=["a", "a", "b", "b"],
+        token_ids=[[1, 2], [3], [4, 5, 6], [7]],
+        metrics=metrics,
+    )
+    assert rewards == [1.0, 0.0, 0.0, 0.0]
+    assert metrics["groups/mixed_frac"] == 0.5
+    assert metrics["groups/all_fail_frac"] == 0.5
+    assert metrics["groups/all_pass_frac"] == 0.0
+    assert metrics["tokens/sampled_total"] == 7
+
+
+def test_grpo_reward_accumulates_sampled_tokens_across_calls():
+    """The sampled-token count is cumulative, which the efficiency metric depends on."""
+    reward_fn = make_grpo_reward(2)
+    metrics = {}
+    call_grpo_reward(reward_fn, ["5", "5"], ["a", "a"], [[1, 2], [3]], metrics)
+    call_grpo_reward(reward_fn, ["5", "5"], ["b", "b"], [[4], [5]], metrics)
+    assert metrics["tokens/sampled_total"] == 5
+
+
+def test_grpo_reward_rejects_groups_that_mix_problems():
+    """Misaligned groups would corrupt the contrast statistics, so they fail immediately."""
+    with pytest.raises(ValueError, match="consecutive groups"):
+        call_grpo_reward(make_grpo_reward(2), ["5", "5"], ["a", "b"], [[1], [2]], {})
 
 
 def test_completion_never_reaches_expression_eval(monkeypatch):
