@@ -40,3 +40,12 @@ trainer:
   report_to: none
   save_strategy: steps
   save_steps: 20
+
+# How the untrained model's skills are written and selected.
+skills:
+  # A skill that reaches this limit is dropped as unfinished. One sentence fits well within it.
+  max_skill_tokens: 64
+  bank_size: 10
+  # The embedding model ExpeL used to compare tasks.
+  embedding_model: sentence-transformers/all-mpnet-base-v2
+  embedding_revision: e8c3b32edf5434bc2275fc9bab85f82640a19130

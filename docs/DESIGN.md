@@ -93,6 +93,33 @@ resumes without repeating finished problems.
 
 The subset exists because evaluating every checkpoint on the full dev set would take hours on a T4.
 
+## Skills
+
+A skill-conditioned run differs from the standard GRPO baseline only in its training prompts, which
+gain a block of tips above the problem. The untrained model writes the skills once, before any
+training, and they stay fixed. Evaluation still omits them. The global bank is built as follows:
+
+1. **Collect rollouts.** The untrained model samples four completions per problem, with GRPO's
+   sampling settings and token limit, on exactly the problems GRPO will train on. TRL's sampler
+   order depends only on the dataset size and seed, so those problems are known in advance. A longer
+   run extends the same order, and adding skills to the prompts does not change the problems drawn.
+2. **Write skills.** For each problem with a correct completion, the model reads its first correct
+   attempt and its first incorrect attempt that finished, then writes a one-sentence hint on the
+   core concept, with wording adapted from NuRL's hint prompt. Problems where every completion fails
+   produce no skill, because a 0.8B model told only that an attempt was wrong is likely to invent a
+   diagnosis.
+3. **Filter.** A skill is dropped if it is unfinished or contains a boxed expression, the gold
+   answer, a number from the problem, or wording that refers to the specific problem. Dropped skills
+   are not rewritten.
+4. **Select.** Skills are embedded with `all-mpnet-base-v2` and clustered into 20 groups with
+   k-means. The bank is the most central skill from each of the 10 largest clusters. It reuses the
+   model's own sentences, because a 0.8B model asked to merge them could lose their content.
+5. **Pilot.** On the 200 training problems after those GRPO trains on, the untrained model is sampled
+   with and without the bank. RL runs only if skills do not lower accuracy and they raise the share
+   of mixed groups.
+
+Clustered retrieval, per-problem conditioning, and the shuffled control are planned but not built.
+
 ## Run records
 
 Each invocation writes a timestamped `run-*.json` with its command, resolved config, Git commit,
